@@ -13,6 +13,7 @@ Christian Today 다니엘기도회 뉴스 자동 감지 및 저장 웹 애플리
 
 - **자동 뉴스 감지**: Christian Today 다니엘기도회 섹션에서 새로운 기사를 자동으로 감지
 - **데이터베이스 저장**: SQLite를 사용하여 기사 URL과 제목을 저장
+- **AI 요약 생성**: OpenAI GPT를 활용한 기사 요약, 키워드 추출, 성경 구절 추천
 - **웹 인터페이스**: 깔끔하고 반응형 웹 UI로 저장된 기사 목록 표시
 - **수동 확인**: 버튼 클릭으로 새로운 기사를 즉시 확인
 - **REST API**: JSON API로 기사 데이터 접근 가능
@@ -156,6 +157,9 @@ vercel --prod
 - `GET /latest?limit=10` - 최근 기사 목록 (JSON)
 - `GET /stats` - 저장된 기사 통계
 - `GET /health` - 서버 상태 확인
+- `GET /summaries` - 요약된 기사 목록
+- `POST /summarize` - 상위 기사들 요약 생성
+- `GET /summary/{article_url}` - 특정 기사 요약 조회
 
 ### 응답 예시
 

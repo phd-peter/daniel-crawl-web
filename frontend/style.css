@@ -216,6 +216,109 @@ h1 {
     text-decoration: underline;
 }
 
+/* 요약 관련 스타일 */
+.summary-btn {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    padding: 8px 16px;
+}
+
+.summary-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.summary-modal-content {
+    background: white;
+    border-radius: 15px;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    margin: 20px;
+}
+
+.summary-modal-header {
+    padding: 20px 30px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.summary-modal-header h3 {
+    margin: 0;
+    color: #2d3748;
+    font-size: 1.5rem;
+}
+
+.summary-modal-header button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #718096;
+    padding: 5px;
+}
+
+.summary-modal-body {
+    padding: 30px;
+}
+
+.summary-section {
+    margin-bottom: 25px;
+}
+
+.summary-section h4 {
+    color: #2d3748;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+}
+
+.summary-section p {
+    line-height: 1.6;
+    color: #4a5568;
+    margin-bottom: 15px;
+}
+
+.keywords {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.keyword {
+    background: #e2e8f0;
+    color: #4a5568;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.bible-verses {
+    list-style: none;
+    padding: 0;
+}
+
+.bible-verses li {
+    background: #f7fafc;
+    padding: 10px 15px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    border-left: 3px solid #667eea;
+    color: #2d3748;
+}
+
 @media (max-width: 768px) {
     .container {
         padding: 15px;
@@ -241,5 +344,15 @@ h1 {
     .btn {
         width: 100%;
         max-width: 250px;
+    }
+
+    .summary-modal-content {
+        margin: 10px;
+        max-height: 90vh;
+    }
+
+    .summary-modal-header,
+    .summary-modal-body {
+        padding: 20px;
     }
 }

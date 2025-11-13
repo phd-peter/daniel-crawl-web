@@ -65,6 +65,7 @@ function displayArticles(articles) {
     articles.forEach(article => {
         const li = document.createElement('li');
         li.className = 'article-item';
+        li.setAttribute('data-url', article.url);
 
         li.innerHTML = `
             <div class="article-title">${escapeHtml(article.title)}</div>
@@ -188,6 +189,126 @@ function formatDate(dateString) {
         return dateString;
     }
 }
+
+// 요약 생성
+async function generateSummaries() {
+    const generateButton = document.querySelectorAll('.btn-primary')[1]; // 두 번째 버튼
+
+    // 로딩 상태로 변경
+    showLoading(true);
+    generateButton.disabled = true;
+    generateButton.textContent = '생성 중...';
+    hideStatusMessage();
+
+    try {
+        const response = await apiCall('/summarize', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (response.success) {
+            showSuccess(response.message);
+
+            // 요약 목록 새로고침
+            setTimeout(() => {
+                loadSummaries();
+            }, 2000);
+        } else {
+            showError('요약 생성에 실패했습니다.');
+        }
+    } catch (error) {
+        console.error('Failed to generate summaries:', error);
+        showError('요약 생성 중 오류가 발생했습니다.');
+    } finally {
+        showLoading(false);
+        generateButton.disabled = false;
+        generateButton.textContent = '🤖 요약 생성';
+    }
+}
+
+// 요약 목록 불러오기
+async function loadSummaries() {
+    try {
+        const data = await apiCall('/summaries?limit=10');
+
+        if (data.summaries && data.summaries.length > 0) {
+            displaySummaries(data.summaries);
+        }
+    } catch (error) {
+        console.error('Failed to load summaries:', error);
+    }
+}
+
+// 요약 표시
+function displaySummaries(summaries) {
+    // 기존 기사 목록에 요약 정보 추가
+    summaries.forEach(summary => {
+        const articleElement = document.querySelector(`[data-url="${summary.article_url}"]`);
+        if (articleElement) {
+            // 요약 버튼 추가 또는 업데이트
+            let summaryBtn = articleElement.querySelector('.summary-btn');
+            if (!summaryBtn) {
+                summaryBtn = document.createElement('button');
+                summaryBtn.className = 'btn btn-secondary summary-btn';
+                summaryBtn.textContent = '📖 요약 보기';
+                summaryBtn.onclick = () => showSummaryModal(summary);
+                articleElement.appendChild(summaryBtn);
+            }
+        }
+    });
+}
+
+// 요약 모달 표시
+function showSummaryModal(summary) {
+    // 간단한 모달 생성
+    const modal = document.createElement('div');
+    modal.className = 'summary-modal';
+    modal.innerHTML = `
+        <div class="summary-modal-content">
+            <div class="summary-modal-header">
+                <h3>${escapeHtml(summary.title)}</h3>
+                <button onclick="this.closest('.summary-modal').remove()">✕</button>
+            </div>
+            <div class="summary-modal-body">
+                <div class="summary-section">
+                    <h4>📝 요약</h4>
+                    <p>${escapeHtml(summary.summary)}</p>
+                </div>
+                <div class="summary-section">
+                    <h4>🏷️ 키워드</h4>
+                    <div class="keywords">
+                        ${summary.keywords.map(k => `<span class="keyword">${escapeHtml(k)}</span>`).join('')}
+                    </div>
+                </div>
+                <div class="summary-section">
+                    <h4>📖 관련 성경 구절</h4>
+                    <ul class="bible-verses">
+                        ${summary.bible_verses.map(v => `<li>${escapeHtml(v)}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // 모달을 body에 추가
+    document.body.appendChild(modal);
+
+    // 배경 클릭으로 닫기
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
+// 페이지 로드 시 요약도 불러오기
+document.addEventListener('DOMContentLoaded', function() {
+    loadArticles();
+    updateStats();
+    loadSummaries(); // 요약도 불러오기
+});
 
 // 주기적으로 통계 업데이트 (30초마다)
 setInterval(updateStats, 30000);

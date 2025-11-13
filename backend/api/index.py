@@ -6,7 +6,8 @@ from datetime import datetime
 from typing import List, Dict
 
 from scraper import get_latest_links
-from db import init_db, save_new_links, get_all_links, get_latest_links as get_stored_links
+from db import init_db, save_new_links, get_all_links, get_latest_links as get_stored_links, get_article_summaries, get_article_summary
+from summarizer import summarize_top_articles
 
 app = FastAPI(
     title="다니엘기도회 뉴스 API",
@@ -79,6 +80,50 @@ async def get_stats():
         })
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"통계 조회 오류: {str(e)}")
+
+@app.get("/summaries")
+async def get_summaries(limit: int = 10):
+    """요약된 기사 목록을 반환"""
+    try:
+        summaries = get_article_summaries(limit=limit)
+        return JSONResponse({
+            "summaries": summaries,
+            "count": len(summaries)
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"요약 데이터 조회 오류: {str(e)}")
+
+@app.post("/summarize")
+async def generate_summaries(limit: int = 3):
+    """상위 N개 기사를 요약하여 저장"""
+    try:
+        summaries = summarize_top_articles(limit=limit)
+        return JSONResponse({
+            "success": True,
+            "message": f"{len(summaries)}개의 기사 요약을 생성했습니다.",
+            "summaries": summaries,
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"요약 생성 중 오류 발생: {str(e)}")
+
+@app.get("/summary/{article_url:path}")
+async def get_single_summary(article_url: str):
+    """특정 기사의 요약을 반환"""
+    try:
+        # URL 디코딩
+        from urllib.parse import unquote
+        decoded_url = unquote(article_url)
+
+        summary = get_article_summary(decoded_url)
+        if summary:
+            return JSONResponse(summary)
+        else:
+            raise HTTPException(status_code=404, detail="요약을 찾을 수 없습니다.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"요약 조회 오류: {str(e)}")
 
 @app.get("/health")
 async def health_check():

@@ -133,5 +133,45 @@ def test_scraper():
 
 
 
+def scrape_article_content(article_url):
+    """
+    Scrape the full content of an article from its URL.
+    Returns the article content text.
+    """
+    try:
+        response = requests.get(article_url, headers=HEADERS, timeout=15)
+        response.raise_for_status()
+        response.encoding = 'utf-8'
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Find the article content div
+        content_div = soup.select_one('.article-content')
+        if not content_div:
+            return None
+
+        # Extract text from the content div
+        # Remove script tags and other unwanted elements
+        for script in content_div.find_all('script'):
+            script.decompose()
+        for style in content_div.find_all('style'):
+            style.decompose()
+
+        # Get text content
+        content_text = content_div.get_text(separator='\n', strip=True)
+
+        # Clean up the text
+        lines = [line.strip() for line in content_text.split('\n') if line.strip()]
+        content_text = '\n'.join(lines)
+
+        return content_text if len(content_text) > 100 else None  # Minimum content length
+
+    except requests.RequestException as e:
+        print(f"Error scraping article {article_url}: {e}")
+        return None
+    except Exception as e:
+        print(f"Unexpected error scraping article {article_url}: {e}")
+        return None
+
 if __name__ == "__main__":
     test_scraper()

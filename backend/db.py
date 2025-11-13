@@ -14,6 +14,17 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS article_summaries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            article_url TEXT UNIQUE,
+            summary TEXT,
+            keywords TEXT,  -- JSON array string
+            bible_verses TEXT,  -- JSON array string
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (article_url) REFERENCES posts (url)
+        )
+    """)
     conn.close()
 
 def save_new_links(links_with_titles):
@@ -81,3 +92,83 @@ def get_latest_links(since_timestamp=None):
         }
         for row in rows
     ]
+
+def save_article_summary(article_url, summary, keywords, bible_verses):
+    """Save article summary to database."""
+    import json
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+
+    # Convert arrays to JSON strings
+    keywords_json = json.dumps(keywords, ensure_ascii=False)
+    bible_verses_json = json.dumps(bible_verses, ensure_ascii=False)
+
+    # Insert or replace summary
+    cur.execute("""
+        INSERT OR REPLACE INTO article_summaries
+        (article_url, summary, keywords, bible_verses)
+        VALUES (?, ?, ?, ?)
+    """, (article_url, summary, keywords_json, bible_verses_json))
+
+    conn.commit()
+    conn.close()
+
+def get_article_summaries(limit=10):
+    """Get article summaries with article info."""
+    import json
+    conn = sqlite3.connect(DB_PATH)
+    rows = conn.execute("""
+        SELECT s.article_url, p.title, s.summary, s.keywords, s.bible_verses, s.created_at
+        FROM article_summaries s
+        JOIN posts p ON s.article_url = p.url
+        ORDER BY s.created_at DESC
+        LIMIT ?
+    """, (limit,)).fetchall()
+    conn.close()
+
+    summaries = []
+    for row in rows:
+        try:
+            keywords = json.loads(row[3]) if row[3] else []
+            bible_verses = json.loads(row[4]) if row[4] else []
+        except json.JSONDecodeError:
+            keywords = []
+            bible_verses = []
+
+        summaries.append({
+            "article_url": row[0],
+            "title": row[1] or "제목 없음",
+            "summary": row[2],
+            "keywords": keywords,
+            "bible_verses": bible_verses,
+            "created_at": row[5]
+        })
+
+    return summaries
+
+def get_article_summary(article_url):
+    """Get summary for a specific article."""
+    import json
+    conn = sqlite3.connect(DB_PATH)
+    row = conn.execute("""
+        SELECT s.summary, s.keywords, s.bible_verses, s.created_at
+        FROM article_summaries s
+        WHERE s.article_url = ?
+    """, (article_url,)).fetchone()
+    conn.close()
+
+    if row:
+        try:
+            keywords = json.loads(row[1]) if row[1] else []
+            bible_verses = json.loads(row[2]) if row[2] else []
+        except json.JSONDecodeError:
+            keywords = []
+            bible_verses = []
+
+        return {
+            "summary": row[0],
+            "keywords": keywords,
+            "bible_verses": bible_verses,
+            "created_at": row[3]
+        }
+    return None
