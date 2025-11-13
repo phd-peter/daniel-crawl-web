@@ -10,9 +10,43 @@ const noArticles = document.getElementById('no-articles');
 const totalCount = document.getElementById('total-count');
 const lastUpdated = document.getElementById('last-updated');
 
+// 페이지 데이터 동시 로딩
+async function loadPageData() {
+    try {
+        showLoading(true);
+
+        // 기사와 요약 데이터를 동시에 가져옴
+        const [articlesData, summariesData] = await Promise.all([
+            apiCall('/latest?limit=50'),
+            apiCall('/summaries?limit=50')
+        ]);
+
+        if (articlesData.articles && articlesData.articles.length > 0) {
+            // 요약 데이터를 Map으로 변환
+            const summaryMap = new Map();
+            if (summariesData.summaries && summariesData.summaries.length > 0) {
+                summariesData.summaries.forEach(summary => {
+                    summaryMap.set(summary.article_url, summary);
+                });
+            }
+
+            // 기사 표시 + 요약 버튼 즉시 추가
+            displayArticlesWithSummaries(articlesData.articles, summaryMap);
+            hideNoArticles();
+        } else {
+            showNoArticles();
+        }
+    } catch (error) {
+        console.error('Failed to load page data:', error);
+        showError('데이터를 불러오는데 실패했습니다.');
+    } finally {
+        showLoading(false);
+    }
+}
+
 // 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', function() {
-    loadArticles();
+    loadPageData();
     updateStats();
 });
 
@@ -56,6 +90,46 @@ async function loadArticles() {
     } finally {
         showLoading(false);
     }
+}
+
+// 기사 표시 (요약 데이터와 함께)
+function displayArticlesWithSummaries(articles, summaryMap) {
+    articleList.innerHTML = '';
+
+    articles.forEach(article => {
+        const li = document.createElement('li');
+        li.className = 'article-item';
+        li.setAttribute('data-url', article.url);
+
+        li.innerHTML = `
+            <div class="article-title">${escapeHtml(article.title)}</div>
+            <a href="${escapeHtml(article.url)}" target="_blank" class="article-link">
+                기사 읽기 →
+            </a>
+            <div class="article-meta">
+                저장일: ${formatDate(article.created_at)}
+            </div>
+        `;
+
+        // 요약 버튼 즉시 추가
+        const existingSummary = summaryMap.get(article.url);
+        const summaryBtn = document.createElement('button');
+        summaryBtn.className = existingSummary ? 'btn btn-secondary summary-btn' : 'btn btn-outline summary-btn';
+        summaryBtn.textContent = existingSummary ? '📖 요약 보기' : '🤖 요약하기';
+
+        if (existingSummary) {
+            summaryBtn.onclick = () => showSummaryModal({
+                article_url: article.url,
+                title: article.title,
+                ...existingSummary
+            });
+        } else {
+            summaryBtn.onclick = () => summarizeSingleArticle(article.url, summaryBtn);
+        }
+
+        li.appendChild(summaryBtn);
+        articleList.appendChild(li);
+    });
 }
 
 // 기사 표시
@@ -379,12 +453,7 @@ function showSummaryModal(summary) {
     });
 }
 
-// 페이지 로드 시 요약도 불러오기
-document.addEventListener('DOMContentLoaded', function() {
-    loadArticles();
-    updateStats();
-    loadSummaries(); // DB에 저장된 요약 자동 표시
-});
+// 기존 초기화 코드는 loadPageData()로 대체됨
 
 // 주기적으로 통계 업데이트 (30초마다)
 setInterval(updateStats, 30000);
