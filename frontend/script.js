@@ -12,33 +12,44 @@ const lastUpdated = document.getElementById('last-updated');
 
 // 페이지 데이터 동시 로딩
 async function loadPageData() {
-    try {
-        showLoading(true);
+    showLoading(true);
 
-        // 기사와 요약 데이터를 동시에 가져옴
-        const [articlesData, summariesData] = await Promise.all([
-            apiCall('/latest?limit=50'),
-            apiCall('/summaries?limit=50')
-        ]);
+    let articles = [];
+
+    try {
+        const articlesData = await apiCall('/latest?limit=50');
 
         if (articlesData.articles && articlesData.articles.length > 0) {
-            // 요약 데이터를 Map으로 변환
-            const summaryMap = new Map();
-            if (summariesData.summaries && summariesData.summaries.length > 0) {
-                summariesData.summaries.forEach(summary => {
-                    summaryMap.set(summary.article_url, summary);
-                });
-            }
-
-            // 기사 표시 + 요약 버튼 즉시 추가
-            displayArticlesWithSummaries(articlesData.articles, summaryMap);
+            articles = articlesData.articles;
+            displayArticlesWithSummaries(articles, new Map());
             hideNoArticles();
         } else {
             showNoArticles();
+            showLoading(false);
+            return;
         }
     } catch (error) {
-        console.error('Failed to load page data:', error);
+        console.error('Failed to load articles:', error);
         showError('데이터를 불러오는데 실패했습니다.');
+        showLoading(false);
+        return;
+    }
+
+    try {
+        const summariesData = await apiCall('/summaries?limit=50');
+        const summaryMap = new Map();
+
+        if (summariesData.summaries && summariesData.summaries.length > 0) {
+            summariesData.summaries.forEach(summary => {
+                summaryMap.set(summary.article_url, summary);
+            });
+        }
+
+        updateSummaryButtons(summaryMap);
+    } catch (error) {
+        console.error('Failed to load summaries:', error);
+        showError('요약 정보를 불러오는데 실패했습니다.');
+        updateSummaryButtons(new Map());
     } finally {
         showLoading(false);
     }
