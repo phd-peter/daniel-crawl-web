@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import List, Dict
 
 from scraper import get_latest_links
-from db import init_db, save_new_links, get_all_links, get_latest_links as get_stored_links, get_article_summaries, get_article_summary
+from db import init_db, save_new_links, get_all_links, get_latest_links as get_stored_links, get_article_summaries, get_article_summary, save_article_summary
 from summarizer import summarize_top_articles
 
 app = FastAPI(
