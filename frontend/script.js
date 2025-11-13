@@ -1,5 +1,6 @@
 // Backend API URL - 배포시 실제 API URL로 변경
-const API_BASE_URL = 'http://localhost:8000'; // 로컬 개발용
+// const API_BASE_URL = 'http://localhost:8000'; // 로컬 개발용
+const API_BASE_URL = 'https://daniel-crawl-web.onrender.com'; // Render backend
 
 // DOM 요소들
 const articleList = document.getElementById('article-list');
