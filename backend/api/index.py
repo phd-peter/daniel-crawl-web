@@ -111,20 +111,29 @@ async def generate_summaries(limit: int = 3):
 async def summarize_single_article(article_url: str):
     """특정 기사를 요약하여 저장"""
     try:
+        print(f"DEBUG: Received URL: {article_url}")
+
         # URL 디코딩
         from urllib.parse import unquote
         decoded_url = unquote(article_url)
+        print(f"DEBUG: Decoded URL: {decoded_url}")
 
         # 기사 정보 조회
         from db import get_all_links
         articles = get_all_links()
+        print(f"DEBUG: Total articles in DB: {len(articles)}")
+
         article = next((a for a in articles if a['url'] == decoded_url), None)
+        print(f"DEBUG: Found article: {article}")
 
         if not article:
+            print(f"ERROR: Article not found for URL: {decoded_url}")
             raise HTTPException(status_code=404, detail="기사를 찾을 수 없습니다.")
 
         # 이미 요약이 있는지 확인
         existing_summary = get_article_summary(decoded_url)
+        print(f"DEBUG: Existing summary: {existing_summary is not None}")
+
         if existing_summary:
             return JSONResponse({
                 "success": False,
@@ -132,11 +141,16 @@ async def summarize_single_article(article_url: str):
                 "summary": existing_summary
             })
 
+        print(f"DEBUG: Starting summarization for: {article['title']}")
+
         # 새 요약 생성
         from summarizer import summarize_article
         summary_data = summarize_article(decoded_url, article['title'])
+        print(f"DEBUG: Summary data generated: {summary_data is not None}")
 
         if summary_data:
+            print(f"DEBUG: Saving summary to DB")
+
             # DB에 저장
             save_article_summary(
                 decoded_url,
@@ -144,6 +158,8 @@ async def summarize_single_article(article_url: str):
                 summary_data['keywords'],
                 summary_data['bible_verses']
             )
+
+            print(f"DEBUG: Summary saved successfully")
 
             return JSONResponse({
                 "success": True,
@@ -156,11 +172,15 @@ async def summarize_single_article(article_url: str):
                 "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             })
         else:
+            print(f"ERROR: Summary generation failed")
             raise HTTPException(status_code=500, detail="요약 생성에 실패했습니다.")
 
     except HTTPException:
         raise
     except Exception as e:
+        print(f"ERROR: Exception in summarize_single_article: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"요약 생성 중 오류 발생: {str(e)}")
 
 @app.get("/summary/{article_url:path}")
