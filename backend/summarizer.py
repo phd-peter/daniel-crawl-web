@@ -22,12 +22,6 @@ def summarize_article(article_url: str, title: str) -> Optional[Dict]:
         # Create the prompt for summarization
         prompt = f"""
 다음은 다니엘기도회 관련 기사입니다:
-
-제목: {title}
-
-본문:
-{content[:4000]}  # Limit content length for API
-
 이 기사를 다음 형식으로 요약해주세요:
 
 1. 요약: 기사를 약 300단어로 요약해주세요. 기사의 핵심 내용과 메시지를 포함하세요.
@@ -35,6 +29,10 @@ def summarize_article(article_url: str, title: str) -> Optional[Dict]:
 2. 키워드: 기사의 주요 키워드 3-5개를 추출해주세요.
 
 3. 성경 구절: 이 기사에서 언급된 성경 구절 1-2개를 추천해주세요. 없다면 작성하지 마세요.
+
+제목: {title}
+
+본문: {content}
 
 응답은 다음 JSON 형식으로 해주세요:
 {{
@@ -50,26 +48,25 @@ def summarize_article(article_url: str, title: str) -> Optional[Dict]:
             input=prompt
         )
 
+        
+
         # Parse the response
-        if hasattr(response, 'output') and response.output:
-            result_text = response.output.strip()
+        if hasattr(response, 'output') and response.output and len(response.output) > 1:
+            result_text = response.output[1].content[0].text
 
-            # Try to extract JSON from the response
+            # Parse the JSON response directly
             try:
-                # Find JSON in the response (in case there's extra text)
-                json_start = result_text.find('{')
-                json_end = result_text.rfind('}') + 1
-                if json_start != -1 and json_end > json_start:
-                    json_str = result_text[json_start:json_end]
-                    result = json.loads(json_str)
+                result = json.loads(result_text)
 
-                    # Validate the result structure
-                    if all(key in result for key in ['summary', 'keywords', 'bible_verses']):
-                        return {
-                            'summary': result['summary'],
-                            'keywords': result['keywords'] if isinstance(result['keywords'], list) else [],
-                            'bible_verses': result['bible_verses'] if isinstance(result['bible_verses'], list) else []
-                        }
+                # Validate the result structure
+                if all(key in result for key in ['summary', 'keywords', 'bible_verses']):
+                    return {
+                        'summary': result['summary'],
+                        'keywords': result['keywords'] if isinstance(result['keywords'], list) else [],
+                        'bible_verses': result['bible_verses'] if isinstance(result['bible_verses'], list) else []
+                    }
+                else:
+                    print(f"Missing required keys in response: {result.keys()}")
             except json.JSONDecodeError as e:
                 print(f"JSON parsing error: {e}")
                 print(f"Response text: {result_text}")
