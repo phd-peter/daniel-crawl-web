@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>다니엘기도회 뉴스 자동 수집</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        h1 {
+            color: #2d3748;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: #718096;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            background: #f7fafc;
+            padding: 15px 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #718096;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+
+        .articles-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            color: #2d3748;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .article-list {
+            list-style: none;
+        }
+
+        .article-item {
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+            background: #fafbfc;
+        }
+
+        .article-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .article-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .article-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .article-link:hover {
+            color: #5a67d8;
+            text-decoration: underline;
+        }
+
+        .article-meta {
+            font-size: 0.9rem;
+            color: #718096;
+            margin-top: 8px;
+        }
+
+        .no-articles {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+            font-style: italic;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .status-success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .status-error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #feb2b2;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+        }
+
+        .footer a {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .stats {
+                gap: 15px;
+            }
+
+            .actions {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📡 다니엘기도회 뉴스 자동 수집</h1>
+            <p class="subtitle">Christian Today 다니엘기도회 뉴스 자동 감지 및 저장 시스템</p>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-label">저장된 기사</div>
+                    <div class="stat-value" id="total-count">{{ links|length }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">마지막 업데이트</div>
+                    <div class="stat-value" id="last-updated">{{ last_updated }}</div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-primary" onclick="checkNewArticles()">
+                    🔄 새 기사 확인
+                </button>
+                <a href="/stats" class="btn btn-secondary" target="_blank">
+                    📊 통계 보기
+                </a>
+                <a href="https://www.christiantoday.co.kr/sections/pd_19" class="btn btn-secondary" target="_blank">
+                    🌐 원본 사이트
+                </a>
+            </div>
+        </div>
+
+        <div class="articles-section">
+            <h2 class="section-title">📚 최근 기사 목록</h2>
+
+            <div id="status-message" class="status-message"></div>
+            <div id="loading" class="loading">기사를 확인하는 중...</div>
+
+            <ul class="article-list" id="article-list">
+                {% for link in links %}
+                <li class="article-item">
+                    <div class="article-title">{{ link.title }}</div>
+                    <a href="{{ link.url }}" target="_blank" class="article-link">
+                        기사 읽기 →
+                    </a>
+                    <div class="article-meta">
+                        저장일: {{ link.created_at }}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+
+            {% if not links %}
+            <div class="no-articles">
+                <p>아직 저장된 기사가 없습니다. "새 기사 확인" 버튼을 클릭하여 기사를 불러와주세요.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="footer">
+            <p>
+                데이터 출처:
+                <a href="https://www.christiantoday.co.kr/sections/pd_19" target="_blank">
+                    Christian Today 다니엘기도회 섹션
+                </a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        async function checkNewArticles() {
+            const loading = document.getElementById('loading');
+            const statusMessage = document.getElementById('status-message');
+            const checkButton = document.querySelector('.btn-primary');
+
+            // Show loading state
+            loading.style.display = 'block';
+            checkButton.disabled = true;
+            checkButton.textContent = '확인 중...';
+            statusMessage.style.display = 'none';
+
+            try {
+                const response = await fetch('/check');
+                const data = await response.json();
+
+                // Hide loading
+                loading.style.display = 'none';
+                checkButton.disabled = false;
+                checkButton.textContent = '🔄 새 기사 확인';
+
+                // Show result message
+                statusMessage.style.display = 'block';
+                if (data.success) {
+                    statusMessage.className = 'status-message status-success';
+                    statusMessage.textContent = data.message;
+
+                    // Reload page after 2 seconds to show new articles
+                    if (data.new_articles.length > 0) {
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    }
+                } else {
+                    statusMessage.className = 'status-message status-error';
+                    statusMessage.textContent = data.message;
+                }
+
+                // Update stats
+                updateStats();
+
+            } catch (error) {
+                loading.style.display = 'none';
+                checkButton.disabled = false;
+                checkButton.textContent = '🔄 새 기사 확인';
+
+                statusMessage.style.display = 'block';
+                statusMessage.className = 'status-message status-error';
+                statusMessage.textContent = '오류가 발생했습니다: ' + error.message;
+            }
+        }
+
+        async function updateStats() {
+            try {
+                const response = await fetch('/stats');
+                const data = await response.json();
+
+                document.getElementById('total-count').textContent = data.total_articles;
+                if (data.last_updated) {
+                    document.getElementById('last-updated').textContent = new Date(data.last_updated).toLocaleString('ko-KR');
+                }
+            } catch (error) {
+                console.error('통계 업데이트 실패:', error);
+            }
+        }
+
+        // Auto-refresh stats every 30 seconds
+        setInterval(updateStats, 30000);
+    </script>
+</body>
+</html>

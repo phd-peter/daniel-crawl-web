@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>다니엘기도회 뉴스 자동 수집</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📡 다니엘기도회 뉴스 자동 수집</h1>
+            <p class="subtitle">Christian Today 다니엘기도회 뉴스 자동 감지 및 저장 시스템</p>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-label">저장된 기사</div>
+                    <div class="stat-value" id="total-count">-</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">마지막 업데이트</div>
+                    <div class="stat-value" id="last-updated">-</div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-primary" onclick="checkNewArticles()">
+                    🔄 새 기사 확인
+                </button>
+                <a href="https://www.christiantoday.co.kr/sections/pd_19" class="btn btn-secondary" target="_blank">
+                    🌐 원본 사이트
+                </a>
+            </div>
+        </div>
+
+        <div class="articles-section">
+            <h2 class="section-title">📚 최근 기사 목록</h2>
+
+            <div id="status-message" class="status-message"></div>
+            <div id="loading" class="loading">기사를 확인하는 중...</div>
+
+            <ul class="article-list" id="article-list">
+                <li class="article-item">
+                    <div class="article-title">기사를 불러오는 중...</div>
+                </li>
+            </ul>
+
+            <div id="no-articles" class="no-articles" style="display: none;">
+                <p>아직 저장된 기사가 없습니다. "새 기사 확인" 버튼을 클릭하여 기사를 불러와주세요.</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>
+                데이터 출처:
+                <a href="https://www.christiantoday.co.kr/sections/pd_19" target="_blank">
+                    Christian Today 다니엘기도회 섹션
+                </a>
+            </p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
