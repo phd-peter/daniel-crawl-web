@@ -307,7 +307,7 @@ function showSummaryModal(summary) {
 document.addEventListener('DOMContentLoaded', function() {
     loadArticles();
     updateStats();
-    loadSummaries(); // 요약도 불러오기
+    // loadSummaries(); // 요약은 사용자가 생성 버튼을 눌러야 함
 });
 
 // 주기적으로 통계 업데이트 (30초마다)
