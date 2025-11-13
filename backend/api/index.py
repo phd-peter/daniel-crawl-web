@@ -107,6 +107,62 @@ async def generate_summaries(limit: int = 3):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"요약 생성 중 오류 발생: {str(e)}")
 
+@app.post("/summarize/{article_url:path}")
+async def summarize_single_article(article_url: str):
+    """특정 기사를 요약하여 저장"""
+    try:
+        # URL 디코딩
+        from urllib.parse import unquote
+        decoded_url = unquote(article_url)
+
+        # 기사 정보 조회
+        from db import get_all_links
+        articles = get_all_links()
+        article = next((a for a in articles if a['url'] == decoded_url), None)
+
+        if not article:
+            raise HTTPException(status_code=404, detail="기사를 찾을 수 없습니다.")
+
+        # 이미 요약이 있는지 확인
+        existing_summary = get_article_summary(decoded_url)
+        if existing_summary:
+            return JSONResponse({
+                "success": False,
+                "message": "이미 요약이 존재합니다.",
+                "summary": existing_summary
+            })
+
+        # 새 요약 생성
+        from summarizer import summarize_article
+        summary_data = summarize_article(decoded_url, article['title'])
+
+        if summary_data:
+            # DB에 저장
+            save_article_summary(
+                decoded_url,
+                summary_data['summary'],
+                summary_data['keywords'],
+                summary_data['bible_verses']
+            )
+
+            return JSONResponse({
+                "success": True,
+                "message": "기사 요약을 생성했습니다.",
+                "summary": {
+                    "article_url": decoded_url,
+                    "title": article['title'],
+                    **summary_data
+                },
+                "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            })
+        else:
+            raise HTTPException(status_code=500, detail="요약 생성에 실패했습니다.")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"요약 생성 중 오류 발생: {str(e)}")
+
 @app.get("/summary/{article_url:path}")
 async def get_single_summary(article_url: str):
     """특정 기사의 요약을 반환"""

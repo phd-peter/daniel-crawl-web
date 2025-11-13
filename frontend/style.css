@@ -108,6 +108,17 @@ h1 {
     background: #cbd5e0;
 }
 
+.btn-outline {
+    background: transparent;
+    color: #667eea;
+    border: 2px solid #667eea;
+}
+
+.btn-outline:hover {
+    background: #667eea;
+    color: white;
+}
+
 .articles-section {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);

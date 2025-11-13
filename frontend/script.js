@@ -79,6 +79,9 @@ function displayArticles(articles) {
 
         articleList.appendChild(li);
     });
+
+    // 요약 버튼들 추가 (기사 표시 후)
+    updateSummaryButtons();
 }
 
 // 통계 정보 업데이트
@@ -241,23 +244,102 @@ async function loadSummaries() {
     }
 }
 
-// 요약 표시
-function displaySummaries(summaries) {
-    // 기존 기사 목록에 요약 정보 추가
-    summaries.forEach(summary => {
-        const articleElement = document.querySelector(`[data-url="${summary.article_url}"]`);
-        if (articleElement) {
-            // 요약 버튼 추가 또는 업데이트
-            let summaryBtn = articleElement.querySelector('.summary-btn');
+// 요약 버튼들 업데이트 (모든 기사에 대해)
+function updateSummaryButtons() {
+    // 모든 기사 요소 가져오기
+    const articleElements = document.querySelectorAll('.article-item');
+
+    articleElements.forEach(async (articleElement) => {
+        const articleUrl = articleElement.getAttribute('data-url');
+        if (!articleUrl) return;
+
+        // 기존 요약 버튼이 있는지 확인
+        let summaryBtn = articleElement.querySelector('.summary-btn');
+
+        try {
+            // 해당 기사의 요약이 있는지 확인
+            const summaryResponse = await fetch(`${API_BASE_URL}/summary/${encodeURIComponent(articleUrl)}`);
+            const summaryData = summaryResponse.ok ? await summaryResponse.json() : null;
+
+            if (summaryData) {
+                // 요약이 있음: "요약 보기" 버튼
+                if (!summaryBtn) {
+                    summaryBtn = document.createElement('button');
+                    summaryBtn.className = 'btn btn-secondary summary-btn';
+                    articleElement.appendChild(summaryBtn);
+                }
+                summaryBtn.textContent = '📖 요약 보기';
+                summaryBtn.onclick = () => showSummaryModal({
+                    article_url: articleUrl,
+                    title: articleElement.querySelector('.article-title').textContent,
+                    ...summaryData
+                });
+            } else {
+                // 요약이 없음: "요약하기" 버튼
+                if (!summaryBtn) {
+                    summaryBtn = document.createElement('button');
+                    summaryBtn.className = 'btn btn-outline summary-btn';
+                    articleElement.appendChild(summaryBtn);
+                }
+                summaryBtn.textContent = '🤖 요약하기';
+                summaryBtn.onclick = () => summarizeSingleArticle(articleUrl, summaryBtn);
+            }
+        } catch (error) {
+            console.error('Error checking summary for article:', articleUrl, error);
+            // 오류 시 기본적으로 "요약하기" 버튼 표시
             if (!summaryBtn) {
                 summaryBtn = document.createElement('button');
-                summaryBtn.className = 'btn btn-secondary summary-btn';
-                summaryBtn.textContent = '📖 요약 보기';
-                summaryBtn.onclick = () => showSummaryModal(summary);
+                summaryBtn.className = 'btn btn-outline summary-btn';
                 articleElement.appendChild(summaryBtn);
             }
+            summaryBtn.textContent = '🤖 요약하기';
+            summaryBtn.onclick = () => summarizeSingleArticle(articleUrl, summaryBtn);
         }
     });
+}
+
+// 개별 기사 요약
+async function summarizeSingleArticle(articleUrl, buttonElement) {
+    // 로딩 상태로 변경
+    const originalText = buttonElement.textContent;
+    buttonElement.disabled = true;
+    buttonElement.textContent = '생성 중...';
+
+    try {
+        const response = await apiCall(`/summarize/${encodeURIComponent(articleUrl)}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (response.success) {
+            showSuccess('기사 요약을 생성했습니다.');
+
+            // 버튼 상태 업데이트
+            buttonElement.disabled = false;
+            buttonElement.textContent = '📖 요약 보기';
+            buttonElement.className = 'btn btn-secondary summary-btn';
+
+            // 요약 모달 표시
+            buttonElement.onclick = () => showSummaryModal(response.summary);
+        } else {
+            showError(response.message || '요약 생성에 실패했습니다.');
+            buttonElement.disabled = false;
+            buttonElement.textContent = originalText;
+        }
+    } catch (error) {
+        console.error('Failed to summarize article:', error);
+        showError('요약 생성 중 오류가 발생했습니다.');
+        buttonElement.disabled = false;
+        buttonElement.textContent = originalText;
+    }
+}
+
+// 요약 표시
+function displaySummaries(summaries) {
+    // 기존 요약 버튼들 업데이트
+    updateSummaryButtons();
 }
 
 // 요약 모달 표시
