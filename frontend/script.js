@@ -80,8 +80,7 @@ function displayArticles(articles) {
         articleList.appendChild(li);
     });
 
-    // 요약 버튼들 추가 (기사 표시 후)
-    updateSummaryButtons();
+    // 요약 버튼들은 loadSummaries()에서 추가됨
 }
 
 // 통계 정보 업데이트
@@ -234,59 +233,54 @@ async function generateSummaries() {
 // 요약 목록 불러오기
 async function loadSummaries() {
     try {
-        const data = await apiCall('/summaries?limit=10');
+        const data = await apiCall('/summaries?limit=50'); // 충분한 수의 요약 가져옴
 
+        // 요약 데이터를 Map으로 변환
+        const summaryMap = new Map();
         if (data.summaries && data.summaries.length > 0) {
-            displaySummaries(data.summaries);
+            data.summaries.forEach(summary => {
+                summaryMap.set(summary.article_url, summary);
+            });
         }
+
+        // 요약 데이터를 전달해서 버튼 업데이트
+        updateSummaryButtons(summaryMap);
     } catch (error) {
         console.error('Failed to load summaries:', error);
+        updateSummaryButtons(new Map()); // 오류 시 빈 Map
     }
 }
 
 // 요약 버튼들 업데이트 (모든 기사에 대해)
-function updateSummaryButtons() {
+function updateSummaryButtons(summaryMap = new Map()) {
     // 모든 기사 요소 가져오기
     const articleElements = document.querySelectorAll('.article-item');
 
-    articleElements.forEach(async (articleElement) => {
+    articleElements.forEach((articleElement) => {
         const articleUrl = articleElement.getAttribute('data-url');
         if (!articleUrl) return;
 
         // 기존 요약 버튼이 있는지 확인
         let summaryBtn = articleElement.querySelector('.summary-btn');
 
-        try {
-            // 해당 기사의 요약이 있는지 확인
-            const summaryResponse = await fetch(`${API_BASE_URL}/summary/${encodeURIComponent(articleUrl)}`);
-            const summaryData = summaryResponse.ok ? await summaryResponse.json() : null;
+        // 요약 데이터 확인
+        const existingSummary = summaryMap.get(articleUrl);
 
-            if (summaryData) {
-                // 요약이 있음: "요약 보기" 버튼
-                if (!summaryBtn) {
-                    summaryBtn = document.createElement('button');
-                    summaryBtn.className = 'btn btn-secondary summary-btn';
-                    articleElement.appendChild(summaryBtn);
-                }
-                summaryBtn.textContent = '📖 요약 보기';
-                summaryBtn.onclick = () => showSummaryModal({
-                    article_url: articleUrl,
-                    title: articleElement.querySelector('.article-title').textContent,
-                    ...summaryData
-                });
-            } else {
-                // 요약이 없음: "요약하기" 버튼
-                if (!summaryBtn) {
-                    summaryBtn = document.createElement('button');
-                    summaryBtn.className = 'btn btn-outline summary-btn';
-                    articleElement.appendChild(summaryBtn);
-                }
-                summaryBtn.textContent = '🤖 요약하기';
-                summaryBtn.onclick = () => summarizeSingleArticle(articleUrl, summaryBtn);
+        if (existingSummary) {
+            // 요약이 있음: "요약 보기" 버튼
+            if (!summaryBtn) {
+                summaryBtn = document.createElement('button');
+                summaryBtn.className = 'btn btn-secondary summary-btn';
+                articleElement.appendChild(summaryBtn);
             }
-        } catch (error) {
-            console.error('Error checking summary for article:', articleUrl, error);
-            // 오류 시 기본적으로 "요약하기" 버튼 표시
+            summaryBtn.textContent = '📖 요약 보기';
+            summaryBtn.onclick = () => showSummaryModal({
+                article_url: articleUrl,
+                title: articleElement.querySelector('.article-title').textContent,
+                ...existingSummary
+            });
+        } else {
+            // 요약이 없음: "요약하기" 버튼
             if (!summaryBtn) {
                 summaryBtn = document.createElement('button');
                 summaryBtn.className = 'btn btn-outline summary-btn';
