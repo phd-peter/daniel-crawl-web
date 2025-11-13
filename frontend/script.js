@@ -111,23 +111,27 @@ function displayArticlesWithSummaries(articles, summaryMap) {
             </div>
         `;
 
-        // 요약 버튼 즉시 추가
+        // 기사 데이터를 data attribute에 저장
+        li.setAttribute('data-title', article.title);
+
+        // 요약 액션 버튼 컨테이너 생성
+        const actionsContainer = document.createElement('div');
+        actionsContainer.className = 'article-actions';
+
+        const summarizeBtn = document.createElement('button');
+        summarizeBtn.className = 'btn btn-outline summary-btn summary-generate-btn';
+        summarizeBtn.textContent = '🤖 요약하기';
+
+        const viewSummaryBtn = document.createElement('button');
+        viewSummaryBtn.className = 'btn btn-outline summary-btn summary-view-btn';
+        viewSummaryBtn.textContent = '📖 요약 보기';
+
+        actionsContainer.appendChild(summarizeBtn);
+        actionsContainer.appendChild(viewSummaryBtn);
+
+        li.appendChild(actionsContainer);
         const existingSummary = summaryMap.get(article.url);
-        const summaryBtn = document.createElement('button');
-        summaryBtn.className = existingSummary ? 'btn btn-secondary summary-btn' : 'btn btn-outline summary-btn';
-        summaryBtn.textContent = existingSummary ? '📖 요약 보기' : '🤖 요약하기';
-
-        if (existingSummary) {
-            summaryBtn.onclick = () => showSummaryModal({
-                article_url: article.url,
-                title: article.title,
-                ...existingSummary
-            });
-        } else {
-            summaryBtn.onclick = () => summarizeSingleArticle(article.url, summaryBtn);
-        }
-
-        li.appendChild(summaryBtn);
+        configureSummaryButtonsForArticle(li, existingSummary);
         articleList.appendChild(li);
     });
 }
@@ -325,6 +329,72 @@ async function loadSummaries() {
     }
 }
 
+function getArticleButtons(articleElement) {
+    return {
+        summarizeBtn: articleElement.querySelector('.summary-generate-btn'),
+        viewBtn: articleElement.querySelector('.summary-view-btn')
+    };
+}
+
+function configureSummaryButtonsForArticle(articleElement, summaryData) {
+    const articleUrl = articleElement.getAttribute('data-url');
+    const articleTitle = articleElement.getAttribute('data-title') || articleElement.querySelector('.article-title')?.textContent || '';
+    let { summarizeBtn, viewBtn } = getArticleButtons(articleElement);
+
+    if (!articleUrl) {
+        return;
+    }
+
+    let actionsContainer = articleElement.querySelector('.article-actions');
+    if (!actionsContainer) {
+        actionsContainer = document.createElement('div');
+        actionsContainer.className = 'article-actions';
+        articleElement.appendChild(actionsContainer);
+    }
+
+    if (!summarizeBtn) {
+        summarizeBtn = document.createElement('button');
+        summarizeBtn.className = 'btn btn-outline summary-btn summary-generate-btn';
+        summarizeBtn.textContent = '🤖 요약하기';
+        actionsContainer.appendChild(summarizeBtn);
+    }
+
+    if (!viewBtn) {
+        viewBtn = document.createElement('button');
+        viewBtn.className = 'btn btn-outline summary-btn summary-view-btn';
+        viewBtn.textContent = '📖 요약 보기';
+        actionsContainer.appendChild(viewBtn);
+    }
+
+    if (!articleElement.getAttribute('data-title') && articleTitle) {
+        articleElement.setAttribute('data-title', articleTitle);
+    }
+
+    const summaryPayload = summaryData
+        ? { ...summaryData, article_url: articleUrl, title: articleTitle }
+        : null;
+
+    articleElement._summaryData = summaryPayload;
+
+    // 공통 summarize 버튼 설정
+    summarizeBtn.disabled = false;
+    summarizeBtn.textContent = '🤖 요약하기';
+    summarizeBtn.className = 'btn btn-outline summary-btn summary-generate-btn';
+    summarizeBtn.onclick = () => summarizeSingleArticle(articleUrl, articleElement);
+
+    // 요약 보기 버튼 설정
+    viewBtn.disabled = false;
+    viewBtn.textContent = '📖 요약 보기';
+
+    if (summaryPayload) {
+        viewBtn.className = 'btn btn-secondary summary-btn summary-view-btn';
+        viewBtn.onclick = () => showSummaryModal(summaryPayload);
+    } else {
+        viewBtn.className = 'btn btn-outline summary-btn summary-view-btn';
+        viewBtn.onclick = () => summarizeSingleArticle(articleUrl, articleElement);
+    }
+}
+
 // 요약 버튼들 업데이트 (모든 기사에 대해)
 function updateSummaryButtons(summaryMap = new Map()) {
     // 모든 기사 요소 가져오기
@@ -334,44 +404,28 @@ function updateSummaryButtons(summaryMap = new Map()) {
         const articleUrl = articleElement.getAttribute('data-url');
         if (!articleUrl) return;
 
-        // 기존 요약 버튼이 있는지 확인
-        let summaryBtn = articleElement.querySelector('.summary-btn');
-
-        // 요약 데이터 확인
         const existingSummary = summaryMap.get(articleUrl);
-
-        if (existingSummary) {
-            // 요약이 있음: "요약 보기" 버튼
-            if (!summaryBtn) {
-                summaryBtn = document.createElement('button');
-                summaryBtn.className = 'btn btn-secondary summary-btn';
-                articleElement.appendChild(summaryBtn);
-            }
-            summaryBtn.textContent = '📖 요약 보기';
-            summaryBtn.onclick = () => showSummaryModal({
-                article_url: articleUrl,
-                title: articleElement.querySelector('.article-title').textContent,
-                ...existingSummary
-            });
-        } else {
-            // 요약이 없음: "요약하기" 버튼
-            if (!summaryBtn) {
-                summaryBtn = document.createElement('button');
-                summaryBtn.className = 'btn btn-outline summary-btn';
-                articleElement.appendChild(summaryBtn);
-            }
-            summaryBtn.textContent = '🤖 요약하기';
-            summaryBtn.onclick = () => summarizeSingleArticle(articleUrl, summaryBtn);
-        }
+        configureSummaryButtonsForArticle(articleElement, existingSummary);
     });
 }
 
 // 개별 기사 요약
-async function summarizeSingleArticle(articleUrl, buttonElement) {
-    // 로딩 상태로 변경
-    const originalText = buttonElement.textContent;
-    buttonElement.disabled = true;
-    buttonElement.textContent = '생성 중...';
+async function summarizeSingleArticle(articleUrl, articleElement) {
+    const { summarizeBtn, viewBtn } = getArticleButtons(articleElement);
+    const previousSummary = articleElement._summaryData || null;
+
+    const originalSummarizeText = summarizeBtn ? summarizeBtn.textContent : '';
+    const originalViewText = viewBtn ? viewBtn.textContent : '';
+
+    if (summarizeBtn) {
+        summarizeBtn.disabled = true;
+        summarizeBtn.textContent = '생성 중...';
+    }
+
+    if (viewBtn) {
+        viewBtn.disabled = true;
+        viewBtn.textContent = '생성 중...';
+    }
 
     try {
         const response = await apiCall(`/summarize/${encodeURIComponent(articleUrl)}`, {
@@ -381,26 +435,33 @@ async function summarizeSingleArticle(articleUrl, buttonElement) {
             },
         });
 
-        if (response.success) {
+        if (response.success && response.summary) {
             showSuccess('기사 요약을 생성했습니다.');
-
-            // 버튼 상태 업데이트
-            buttonElement.disabled = false;
-            buttonElement.textContent = '📖 요약 보기';
-            buttonElement.className = 'btn btn-secondary summary-btn';
-
-            // 요약 모달 표시
-            buttonElement.onclick = () => showSummaryModal(response.summary);
+            configureSummaryButtonsForArticle(articleElement, response.summary);
         } else {
             showError(response.message || '요약 생성에 실패했습니다.');
-            buttonElement.disabled = false;
-            buttonElement.textContent = originalText;
+            if (summarizeBtn) {
+                summarizeBtn.disabled = false;
+                summarizeBtn.textContent = originalSummarizeText;
+            }
+            if (viewBtn) {
+                viewBtn.disabled = false;
+                viewBtn.textContent = originalViewText;
+            }
+            configureSummaryButtonsForArticle(articleElement, previousSummary);
         }
     } catch (error) {
         console.error('Failed to summarize article:', error);
         showError('요약 생성 중 오류가 발생했습니다.');
-        buttonElement.disabled = false;
-        buttonElement.textContent = originalText;
+        if (summarizeBtn) {
+            summarizeBtn.disabled = false;
+            summarizeBtn.textContent = originalSummarizeText;
+        }
+        if (viewBtn) {
+            viewBtn.disabled = false;
+            viewBtn.textContent = originalViewText;
+        }
+        configureSummaryButtonsForArticle(articleElement, previousSummary);
     }
 }
 
