@@ -30,7 +30,7 @@ async function loadPageData() {
         }
     } catch (error) {
         console.error('Failed to load articles:', error);
-        showError('데이터를 불러오는데 실패했습니다.');
+        showError('기사를 불러오는데 실패했습니다.');
         showLoading(false);
         return;
     }
