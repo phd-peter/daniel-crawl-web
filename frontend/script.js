@@ -263,64 +263,6 @@ function formatDate(dateString) {
     }
 }
 
-// 요약 생성
-async function generateSummaries() {
-    const generateButton = document.querySelectorAll('.btn-primary')[1]; // 두 번째 버튼
-
-    // 로딩 상태로 변경
-    showLoading(true);
-    generateButton.disabled = true;
-    generateButton.textContent = '생성 중...';
-    hideStatusMessage();
-
-    try {
-        const response = await apiCall('/summarize', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        });
-
-        if (response.success) {
-            showSuccess(response.message);
-
-            // 요약 목록 새로고침
-            setTimeout(() => {
-                loadSummaries();
-            }, 2000);
-        } else {
-            showError('요약 생성에 실패했습니다.');
-        }
-    } catch (error) {
-        console.error('Failed to generate summaries:', error);
-        showError('요약 생성 중 오류가 발생했습니다.');
-    } finally {
-        showLoading(false);
-        generateButton.disabled = false;
-        generateButton.textContent = '🤖 요약 생성';
-    }
-}
-
-// 요약 목록 불러오기
-async function loadSummaries() {
-    try {
-        const data = await apiCall('/summaries?limit=50'); // 충분한 수의 요약 가져옴
-
-        // 요약 데이터를 Map으로 변환
-        const summaryMap = new Map();
-        if (data.summaries && data.summaries.length > 0) {
-            data.summaries.forEach(summary => {
-                summaryMap.set(summary.article_url, summary);
-            });
-        }
-
-        // 요약 데이터를 전달해서 버튼 업데이트
-        updateSummaryButtons(summaryMap);
-    } catch (error) {
-        console.error('Failed to load summaries:', error);
-        updateSummaryButtons(new Map()); // 오류 시 빈 Map
-    }
-}
 
 // 요약 버튼들 업데이트 (모든 기사에 대해)
 function updateSummaryButtons(summaryMap = new Map()) {
