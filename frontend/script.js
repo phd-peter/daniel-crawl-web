@@ -191,7 +191,7 @@ async function checkNewArticles() {
             // 새 기사가 있으면 목록 새로고침
             if (data.new_articles && data.new_articles.length > 0) {
                 setTimeout(() => {
-                    loadArticles();
+                    loadPageData();
                     updateStats();
                 }, 2000);
             } else {

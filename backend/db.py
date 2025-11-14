@@ -2,7 +2,8 @@ import sqlite3
 import os
 from datetime import datetime
 
-DB_PATH = "articles.db"
+# DB 경로를 절대 경로로 설정하여 backend 폴더에서 실행하든 root에서 실행하든 동일한 DB 사용
+DB_PATH = os.path.join(os.path.dirname(__file__), "articles.db")
 
 def init_db():
     """Initialize the database and create tables if they don't exist."""
