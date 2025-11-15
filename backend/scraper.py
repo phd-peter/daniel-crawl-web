@@ -8,7 +8,55 @@ HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 }
 
-def get_latest_links() -> List[Tuple[str, str]]:
+def scrape_article_date(article_url: str) -> str:
+    """
+    개별 기사 페이지에서 작성일 추출
+    """
+    try:
+        response = requests.get(article_url, headers=HEADERS, timeout=10)
+        response.raise_for_status()
+        response.encoding = 'utf-8'
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Christian Today의 작성일 표기 방식들:
+        # 1. <time datetime="2024-11-15T10:30:00+09:00">형식
+        # 2. 기사 메타 정보에서 날짜 찾기
+        # 3. <span class="date"> 또는 유사한 클래스
+
+        # 방법 1: <time> 태그에서 datetime 속성 찾기
+        time_element = soup.find('time', {'datetime': True})
+        if time_element and time_element.get('datetime'):
+            datetime_str = time_element.get('datetime')
+            # ISO 8601 형식에서 날짜 부분만 추출 (2024-11-15T10:30:00+09:00 -> 2024-11-15)
+            if 'T' in datetime_str:
+                return datetime_str.split('T')[0]
+            return datetime_str
+
+        # 방법 2: 날짜 관련 텍스트 찾기 (예: "2024-11-15", "2024.11.15" 등)
+        import re
+        date_patterns = [
+            r'\d{4}-\d{2}-\d{2}',  # 2024-11-15
+            r'\d{4}\.\d{2}\.\d{2}',  # 2024.11.15
+        ]
+
+        text_content = soup.get_text()
+        for pattern in date_patterns:
+            matches = re.findall(pattern, text_content)
+            if matches:
+                # 첫 번째 매치를 표준 형식으로 변환
+                date_str = matches[0]
+                if '.' in date_str:
+                    date_str = date_str.replace('.', '-')
+                return date_str
+
+        return None
+
+    except Exception as e:
+        print(f"날짜 추출 실패 {article_url}: {e}")
+        return None
+
+def get_latest_links() -> List[Tuple[str, str, str]]:
     """
     Scrape the Christian Today Daniel Prayer section for article links and titles.
     Handles two different HTML structures:
@@ -103,15 +151,18 @@ def get_latest_links() -> List[Tuple[str, str]]:
                     if 'christiantoday.co.kr/news/' in full_url:
                         articles.append((full_url, title))
 
-        # Remove duplicates while preserving order (latest news first)
+        # 기사별 작성일 추출 및 튜플 생성 (url, title, published_at)
+        articles_with_dates = []
         seen = set()
-        unique_articles = []
+
         for url, title in articles:
             if url not in seen:
                 seen.add(url)
-                unique_articles.append((url, title))
+                # 작성일 추출
+                published_at = scrape_article_date(url)
+                articles_with_dates.append((url, title, published_at))
 
-        return unique_articles
+        return articles_with_dates
 
     except requests.RequestException as e:
         print(f"Error scraping website: {e}")
@@ -125,9 +176,10 @@ def test_scraper():
     print("Testing scraper...")
     articles = get_latest_links()
     print(f"Found {len(articles)} articles:")
-    for i, (url, title) in enumerate(articles[:5]):  # Show first 5
+    for i, (url, title, published_at) in enumerate(articles[:5]):  # Show first 5
         print(f"{i+1}. {title}")
-        print(f"   {url}")
+        print(f"   URL: {url}")
+        print(f"   날짜: {published_at}")
         print()
     return articles
 
@@ -173,7 +225,7 @@ def scrape_article_content(article_url):
         print(f"Unexpected error scraping article {article_url}: {e}")
         return None
 
-def get_articles_from_page(page_num=2):
+def get_articles_from_page(page_num=2) -> List[Tuple[str, str, str]]:
     """
     특정 페이지의 기사들을 크롤링
     기존 get_latest_links() 로직 재사용
@@ -248,15 +300,18 @@ def get_articles_from_page(page_num=2):
                     if 'christiantoday.co.kr/news/' in full_url:
                         articles.append((full_url, title))
 
-        # Remove duplicates while preserving order
+        # 기사별 작성일 추출 및 튜플 생성 (url, title, published_at)
+        articles_with_dates = []
         seen = set()
-        unique_articles = []
+
         for url, title in articles:
             if url not in seen:
                 seen.add(url)
-                unique_articles.append((url, title))
+                # 작성일 추출
+                published_at = scrape_article_date(url)
+                articles_with_dates.append((url, title, published_at))
 
-        return unique_articles
+        return articles_with_dates
 
     except requests.RequestException as e:
         print(f"Error scraping page {page_num}: {e}")

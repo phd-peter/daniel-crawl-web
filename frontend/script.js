@@ -128,7 +128,7 @@ function displayArticlesWithSummaries(articles, summaryMap) {
                 기사 읽기 →
             </a>
             <div class="article-meta">
-                저장일: ${formatDate(article.created_at)}
+                작성일: ${formatDate(article.created_at)}
             </div>
         `;
 
@@ -154,7 +154,7 @@ function displayArticles(articles) {
                 기사 읽기 →
             </a>
             <div class="article-meta">
-                저장일: ${formatDate(article.created_at)}
+                작성일: ${formatDate(article.created_at)}
             </div>
         `;
 

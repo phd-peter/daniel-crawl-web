@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import List, Dict
 
 from scraper import get_latest_links
-from db import init_db, save_new_links, get_all_links, get_latest_links as get_stored_links, get_article_summaries, get_article_summary, save_article_summary, get_paginated_links, get_total_article_count
+from db import init_db, save_new_links, get_all_links, get_latest_links as get_stored_links, get_article_summaries, get_article_summary, save_article_summary, get_paginated_links, get_total_article_count, migrate_published_dates
 from summarizer import summarize_top_articles
 
 app = FastAPI(
@@ -229,6 +229,19 @@ async def get_single_summary(article_url: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"요약 조회 오류: {str(e)}")
+
+@app.post("/migrate")
+async def migrate_existing_articles():
+    """기존 기사들의 작성일 정보를 마이그레이션"""
+    try:
+        updated_count = migrate_published_dates()
+        return JSONResponse({
+            "success": True,
+            "message": f"{updated_count}개 기사의 작성일을 마이그레이션했습니다.",
+            "updated_count": updated_count
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"마이그레이션 중 오류 발생: {str(e)}")
 
 @app.get("/health")
 async def health_check():
