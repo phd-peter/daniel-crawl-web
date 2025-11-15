@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import List, Dict
 
 from scraper import get_latest_links
-from db import init_db, save_new_links, get_all_links, get_latest_links as get_stored_links, get_article_summaries, get_article_summary, save_article_summary
+from db import init_db, save_new_links, get_all_links, get_latest_links as get_stored_links, get_article_summaries, get_article_summary, save_article_summary, get_paginated_links, get_total_article_count
 from summarizer import summarize_top_articles
 
 app = FastAPI(
@@ -69,14 +69,30 @@ async def check_new_articles():
         raise HTTPException(status_code=500, detail=f"기사 확인 중 오류 발생: {str(e)}")
 
 @app.get("/latest")
-async def get_latest_articles(limit: int = 10):
-    """최근 저장된 기사 목록을 JSON으로 반환"""
+async def get_latest_articles(page: int = 1, per_page: int = 20):
+    """최근 저장된 기사 목록을 페이지별로 JSON으로 반환"""
     try:
-        links = get_stored_links()
+        # 입력값 검증
+        if page < 1:
+            page = 1
+        if per_page < 1 or per_page > 100:
+            per_page = 20
+
+        # 페이징된 기사 가져오기
+        articles = get_paginated_links(page=page, per_page=per_page)
+
+        # 전체 기사 수 가져오기
+        total_articles = get_total_article_count()
+        total_pages = (total_articles + per_page - 1) // per_page  # 올림 나눗셈
+
         return JSONResponse({
-            "articles": links[:limit],
-            "count": len(links[:limit]),
-            "total_stored": len(get_all_links())
+            "articles": articles,
+            "pagination": {
+                "current_page": page,
+                "per_page": per_page,
+                "total_articles": total_articles,
+                "total_pages": total_pages
+            }
         })
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"데이터 조회 오류: {str(e)}")

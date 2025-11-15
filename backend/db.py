@@ -71,6 +71,33 @@ def get_all_links(limit=50):
         for row in rows
     ]
 
+def get_paginated_links(page=1, per_page=20):
+    """Get paginated articles ordered by creation date (newest first)."""
+    conn = sqlite3.connect(DB_PATH)
+    offset = (page - 1) * per_page
+
+    rows = conn.execute(
+        "SELECT url, title, created_at FROM posts ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        (per_page, offset)
+    ).fetchall()
+    conn.close()
+
+    return [
+        {
+            "url": row[0],
+            "title": row[1] or "제목 없음",
+            "created_at": row[2]
+        }
+        for row in rows
+    ]
+
+def get_total_article_count():
+    """Get total count of articles in database."""
+    conn = sqlite3.connect(DB_PATH)
+    row = conn.execute("SELECT COUNT(*) FROM posts").fetchone()
+    conn.close()
+    return row[0] if row else 0
+
 def get_latest_links(since_timestamp=None):
     """Get articles created after a specific timestamp."""
     conn = sqlite3.connect(DB_PATH)

@@ -10,18 +10,28 @@ const noArticles = document.getElementById('no-articles');
 const totalCount = document.getElementById('total-count');
 const lastUpdated = document.getElementById('last-updated');
 
+// 페이지네이션 관련 변수들
+let currentPage = 1;
+let totalPages = 1;
+let perPage = 20;
+
 // 페이지 데이터 동시 로딩
-async function loadPageData() {
+async function loadPageData(page = 1) {
     showLoading(true);
+    currentPage = page;
 
     let articles = [];
 
     try {
-        const articlesData = await apiCall('/latest?limit=50');
+        const articlesData = await apiCall(`/latest?page=${page}&per_page=${perPage}`);
 
         if (articlesData.articles && articlesData.articles.length > 0) {
             articles = articlesData.articles;
+            // 페이지네이션 정보 업데이트
+            totalPages = articlesData.pagination?.total_pages || 1;
+
             displayArticlesWithSummaries(articles, new Map());
+            updatePaginationControls();
             hideNoArticles();
         } else {
             showNoArticles();
@@ -443,6 +453,73 @@ function showSummaryModal(summary) {
             modal.remove();
         }
     });
+}
+
+// 페이지네이션 관련 함수들
+function changePage(page) {
+    if (page < 1 || page > totalPages) return;
+
+    loadPageData(page);
+    // 페이지 맨 위로 스크롤
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function updatePaginationControls() {
+    let paginationContainer = document.getElementById('pagination-controls');
+
+    if (!paginationContainer) {
+        paginationContainer = document.createElement('div');
+        paginationContainer.id = 'pagination-controls';
+        paginationContainer.className = 'pagination-controls';
+
+        // 기사 목록 다음에 삽입
+        const articlesSection = document.querySelector('.articles-section');
+        articlesSection.appendChild(paginationContainer);
+    }
+
+    // 페이지네이션이 필요 없는 경우 (1페이지만 있는 경우)
+    if (totalPages <= 1) {
+        paginationContainer.style.display = 'none';
+        return;
+    }
+
+    paginationContainer.style.display = 'flex';
+
+    let paginationHtml = '';
+
+    // 이전 버튼
+    paginationHtml += `<button class="pagination-btn pagination-prev" ${currentPage === 1 ? 'disabled' : ''} onclick="changePage(${currentPage - 1})">‹ 이전</button>`;
+
+    // 페이지 번호들
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+
+    // 첫 페이지로 이동
+    if (startPage > 1) {
+        paginationHtml += `<button class="pagination-btn" onclick="changePage(1)">1</button>`;
+        if (startPage > 2) {
+            paginationHtml += `<span class="pagination-dots">...</span>`;
+        }
+    }
+
+    // 페이지 번호 버튼들
+    for (let i = startPage; i <= endPage; i++) {
+        const activeClass = i === currentPage ? 'active' : '';
+        paginationHtml += `<button class="pagination-btn ${activeClass}" onclick="changePage(${i})">${i}</button>`;
+    }
+
+    // 마지막 페이지로 이동
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            paginationHtml += `<span class="pagination-dots">...</span>`;
+        }
+        paginationHtml += `<button class="pagination-btn" onclick="changePage(${totalPages})">${totalPages}</button>`;
+    }
+
+    // 다음 버튼
+    paginationHtml += `<button class="pagination-btn pagination-next" ${currentPage === totalPages ? 'disabled' : ''} onclick="changePage(${currentPage + 1})">다음 ›</button>`;
+
+    paginationContainer.innerHTML = paginationHtml;
 }
 
 // 기존 초기화 코드는 loadPageData()로 대체됨
