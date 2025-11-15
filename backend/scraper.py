@@ -101,10 +101,9 @@ def get_latest_links() -> List[Tuple[str, str, str]]:
                 if 'christiantoday.co.kr/news/' in full_url:
                     articles.append((full_url, title))
 
-        # Phase 2: Extract regular news (ul.l-list li elements)
-        # These are the rest of the articles in list format
-        # Try multiple selectors to find titles in different structures
-        list_items = soup.select('ul.l-list li')
+        # Phase 2: Extract regular news from the specific list container
+        # Only from ul.l-list.w-divider.gap-md.no-bullet li elements
+        list_items = soup.select('ul.l-list.w-divider.gap-md.no-bullet li')
 
         for li in list_items:
             # Find the news link within this li element
@@ -262,8 +261,9 @@ def get_articles_from_page(page_num=2) -> List[Tuple[str, str, str]]:
                 if 'christiantoday.co.kr/news/' in full_url:
                     articles.append((full_url, title))
 
-        # Phase 2: Extract regular news (ul.l-list li elements)
-        list_items = soup.select('ul.l-list li')
+        # Phase 2: Extract regular news from the specific list container
+        # Only from ul.l-list.w-divider.gap-md.no-bullet li elements
+        list_items = soup.select('ul.l-list.w-divider.gap-md.no-bullet li')
 
         for li in list_items:
             link = li.find('a', href=lambda x: x and '/news/' in x)
