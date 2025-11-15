@@ -29,6 +29,43 @@ def init_db():
     """)
     conn.close()
 
+def reset_database():
+    """Reset the database by dropping all tables and recreating them."""
+    conn = sqlite3.connect(DB_PATH)
+
+    # Drop existing tables
+    try:
+        conn.execute("DROP TABLE IF EXISTS article_summaries")
+        conn.execute("DROP TABLE IF EXISTS posts")
+        print("📝 기존 테이블 삭제 완료")
+    except Exception as e:
+        print(f"⚠️ 테이블 삭제 중 오류: {e}")
+
+    # Recreate tables
+    conn.execute("""
+        CREATE TABLE posts (
+            url TEXT PRIMARY KEY,
+            title TEXT,
+            published_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE article_summaries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            article_url TEXT UNIQUE,
+            summary TEXT,
+            keywords TEXT,  -- JSON array string
+            bible_verses TEXT,  -- JSON array string
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (article_url) REFERENCES posts (url)
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+    print("🔄 데이터베이스 재생성 완료")
+
 def save_new_links(links_with_titles_and_dates):
     """
     Save new article links to database.

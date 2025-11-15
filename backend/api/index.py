@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import List, Dict
 
 from scraper import get_latest_links
-from db import init_db, save_new_links, get_all_links, get_latest_links as get_stored_links, get_article_summaries, get_article_summary, save_article_summary, get_paginated_links, get_total_article_count, migrate_published_dates
+from db import init_db, reset_database, save_new_links, get_all_links, get_latest_links as get_stored_links, get_article_summaries, get_article_summary, save_article_summary, get_paginated_links, get_total_article_count, migrate_published_dates
 from summarizer import summarize_top_articles
 
 app = FastAPI(
@@ -27,8 +27,32 @@ app.add_middleware(
 # Initialize database on startup
 init_db()
 
-# 환경변수로 제어되는 1회성 bulk import
-if os.getenv("RUN_BULK_IMPORT") == "true":
+# 환경변수로 제어되는 데이터베이스 리셋 (우선순위 1)
+if os.getenv("RESET_DATABASE") == "true":
+    print("🔄 환경변수 RESET_DATABASE=true 감지!")
+    print("데이터베이스 완전 리셋 시작...")
+    try:
+        reset_database()
+        print("✅ 데이터베이스 리셋 완료!")
+
+        # 리셋 후 bulk import 확인 (우선순위 2)
+        if os.getenv("RUN_BULK_IMPORT") == "true":
+            print("🏗️ 환경변수 RUN_BULK_IMPORT=true 감지!")
+            print("리셋 후 1회성 bulk import 시작...")
+            try:
+                from bulk_import import import_page2_articles
+                count = import_page2_articles()
+                print(f"✅ {count}개 과거 기사 추가 완료!")
+            except Exception as e:
+                print(f"❌ Bulk import 실패: {e}")
+        else:
+            print("ℹ️ RUN_BULK_IMPORT 환경변수가 설정되지 않아 bulk import 생략")
+
+    except Exception as e:
+        print(f"❌ 데이터베이스 리셋 실패: {e}")
+
+# 리셋 없이 bulk import만 실행하는 경우 (기존 데이터 유지)
+elif os.getenv("RUN_BULK_IMPORT") == "true":
     print("🏗️ 환경변수 RUN_BULK_IMPORT=true 감지!")
     print("1회성 bulk import 시작...")
     try:
@@ -38,7 +62,7 @@ if os.getenv("RUN_BULK_IMPORT") == "true":
     except Exception as e:
         print(f"❌ Bulk import 실패: {e}")
 else:
-    print("ℹ️ RUN_BULK_IMPORT 환경변수가 설정되지 않아 bulk import 생략")
+    print("ℹ️ 환경변수가 설정되지 않아 초기화 작업 생략")
 
 @app.get("/check")
 async def check_new_articles():
