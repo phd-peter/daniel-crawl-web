@@ -13,7 +13,7 @@ const lastUpdated = document.getElementById('last-updated');
 // 페이지네이션 관련 변수들
 let currentPage = 1;
 let totalPages = 1;
-let perPage = 20;
+let perPage = 10;
 
 // 페이지 데이터 동시 로딩
 async function loadPageData(page = 1) {
