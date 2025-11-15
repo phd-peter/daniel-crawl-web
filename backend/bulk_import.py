@@ -23,8 +23,11 @@ def import_page2_articles():
 
     print(f"Page 2에서 {len(articles)}개 기사 발견")
     print("샘플 기사들:")
-    for i, (url, title) in enumerate(articles[:3]):
-        print(f"  {i+1}. {title[:50]}...")
+    for i, (url, title, published_at) in enumerate(articles[:3]):
+        if published_at:
+            print(f"  {i+1}. [{published_at}] {title[:40]}...")
+        else:
+            print(f"  {i+1}. {title[:50]}...")
 
     print("\nDB에 저장 시작...")
     new_articles = save_new_links(articles)
