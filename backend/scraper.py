@@ -173,5 +173,97 @@ def scrape_article_content(article_url):
         print(f"Unexpected error scraping article {article_url}: {e}")
         return None
 
+def get_articles_from_page(page_num=2):
+    """
+    특정 페이지의 기사들을 크롤링
+    기존 get_latest_links() 로직 재사용
+    """
+    page_url = f"https://www.christiantoday.co.kr/sections/pd_19/page{page_num}.htm"
+
+    try:
+        response = requests.get(page_url, headers=HEADERS, timeout=10)
+        response.raise_for_status()
+        response.encoding = 'utf-8'
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        articles = []
+
+        # Phase 1: Extract latest news (article h2 a)
+        latest_news_links = soup.select('article h2 a[href*="/news/"]')
+        for link in latest_news_links:
+            href = link.get('href')
+            if href:
+                if href.startswith('http'):
+                    full_url = href
+                else:
+                    full_url = f"https://www.christiantoday.co.kr{href}"
+
+                title = link.get_text(strip=True)
+                if title:
+                    title = title.replace('\n', ' ').replace('\r', ' ').strip()
+                    while '  ' in title:
+                        title = title.replace('  ', ' ')
+                else:
+                    title = "제목 없음"
+
+                if 'christiantoday.co.kr/news/' in full_url:
+                    articles.append((full_url, title))
+
+        # Phase 2: Extract regular news (ul.l-list li elements)
+        list_items = soup.select('ul.l-list li')
+
+        for li in list_items:
+            link = li.find('a', href=lambda x: x and '/news/' in x)
+            if link:
+                href = link.get('href')
+                if href:
+                    if href.startswith('http'):
+                        full_url = href
+                    else:
+                        full_url = f"https://www.christiantoday.co.kr{href}"
+
+                    title = link.get_text(strip=True)
+
+                    if not title or title == "...":
+                        title_elem = li.find(['h3', 'h4', 'strong', 'b', '.title', '.headline'])
+                        if title_elem:
+                            title = title_elem.get_text(strip=True)
+                        else:
+                            li_text = li.get_text(separator=' ', strip=True)
+                            for other_link in li.find_all('a'):
+                                if other_link != link:
+                                    other_link.extract()
+                            li_text = li.get_text(separator=' ', strip=True)
+                            if li_text and len(li_text) > 10:
+                                title = li_text
+
+                    if title and title not in ["...", ""]:
+                        title = title.replace('\n', ' ').replace('\r', ' ').strip()
+                        while '  ' in title:
+                            title = title.replace('  ', ' ')
+                    else:
+                        title = "제목 없음"
+
+                    if 'christiantoday.co.kr/news/' in full_url:
+                        articles.append((full_url, title))
+
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_articles = []
+        for url, title in articles:
+            if url not in seen:
+                seen.add(url)
+                unique_articles.append((url, title))
+
+        return unique_articles
+
+    except requests.RequestException as e:
+        print(f"Error scraping page {page_num}: {e}")
+        return []
+    except Exception as e:
+        print(f"Unexpected error during scraping page {page_num}: {e}")
+        return []
+
 if __name__ == "__main__":
     test_scraper()
