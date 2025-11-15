@@ -1,11 +1,15 @@
 import os
+from dotenv import load_dotenv
 from openai import OpenAI
 from typing import Dict, List, Optional
 import json
 from scraper import scrape_article_content
 
+# Load environment variables
+load_dotenv()
+
 # Initialize OpenAI client
-client = OpenAI()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def summarize_article(article_url: str, title: str) -> Optional[Dict]:
     """
@@ -43,16 +47,15 @@ def summarize_article(article_url: str, title: str) -> Optional[Dict]:
 """
 
         # Call OpenAI API
-        response = client.responses.create(
-            model="gpt-5-mini-2025-08-07",
-            input=prompt
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3
         )
 
-        
-
         # Parse the response
-        if hasattr(response, 'output') and response.output and len(response.output) > 1:
-            result_text = response.output[1].content[0].text
+        if response.choices and len(response.choices) > 0:
+            result_text = response.choices[0].message.content.strip()
 
             # Parse the JSON response directly
             try:
@@ -71,8 +74,8 @@ def summarize_article(article_url: str, title: str) -> Optional[Dict]:
                 print(f"JSON parsing error: {e}")
                 print(f"Response text: {result_text}")
 
-        print(f"Invalid response format from OpenAI for article: {article_url}")
-        return None
+            print(f"Invalid response format from OpenAI for article: {article_url}")
+            return None
 
     except Exception as e:
         print(f"Error summarizing article {article_url}: {e}")
@@ -84,7 +87,6 @@ def summarize_top_articles(limit: int = 3) -> List[Dict]:
     Returns list of summary dictionaries.
     """
     from db import get_all_links
-
     try:
         # Get the most recent articles
         articles = get_all_links(limit=limit)
