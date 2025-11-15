@@ -27,6 +27,19 @@ app.add_middleware(
 # Initialize database on startup
 init_db()
 
+# 환경변수로 제어되는 1회성 bulk import
+if os.getenv("RUN_BULK_IMPORT") == "true":
+    print("🏗️ 환경변수 RUN_BULK_IMPORT=true 감지!")
+    print("1회성 bulk import 시작...")
+    try:
+        from bulk_import import import_page2_articles
+        count = import_page2_articles()
+        print(f"✅ {count}개 과거 기사 추가 완료!")
+    except Exception as e:
+        print(f"❌ Bulk import 실패: {e}")
+else:
+    print("ℹ️ RUN_BULK_IMPORT 환경변수가 설정되지 않아 bulk import 생략")
+
 @app.get("/check")
 async def check_new_articles():
     """새로운 기사를 수동으로 확인하고 저장"""
